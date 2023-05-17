@@ -23,7 +23,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-public class SummaryByState {
+public class BusinessSummaryByState {
     public static class Map extends Mapper<Object, Text, Text, Text> {
         Gson gson = new GsonBuilder().disableHtmlEscaping().create(); // html의 주요 특수문자(<, >, ' 등)을 그대로 유지
 
@@ -38,9 +38,11 @@ public class SummaryByState {
             _value.addProperty("count", 1); // 전체 개수
 
             // 카테고리 별 계산
-            String[] categories = json.get("categories").getAsString().split(", "); // ', '를 기준으로 문자열을 분할함
-            for (String category : categories) {
-                _valueCategories.addProperty(category, 1);
+            if(!json.get("categories").isJsonNull()) { // 가게에 카테고리가 있는 경우만 실행
+                String[] categories = json.get("categories").getAsString().split(", "); // ', '를 기준으로 문자열을 분할함
+                for (String category : categories) {
+                    _valueCategories.addProperty(category, 1);
+                }
             }
             _value.add("categories", _valueCategories); // value에 카테고리 별 계산을 한 결과를 넣음
 
@@ -52,7 +54,7 @@ public class SummaryByState {
         Gson gson = new GsonBuilder().disableHtmlEscaping().create(); // html의 주요 특수문자(<, >, ', ...)등을 그대로 유지
 
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-            int countSummation = 0; // 현재 주의 가게 총 합
+            int countSummation = 0; // 현재 주의 가게의 합
             HashMap<String, Integer> categoriesHashMap = new HashMap<String, Integer>();
 
             for (Text value : values) {
@@ -100,7 +102,7 @@ public class SummaryByState {
 
         // 잡 생성 및 설정
         Job job = Job.getInstance(conf, "Merge Json");
-        job.setJarByClass(SummaryByState.class); // Job 클래스 설정
+        job.setJarByClass(BusinessSummaryByState.class); // Job 클래스 설정
         job.setMapperClass(Map.class); // Mapper 클래스 설정
         job.setReducerClass(Reduce.class); // Reducer 클래스 설정
 
