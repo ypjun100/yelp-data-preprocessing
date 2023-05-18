@@ -1,4 +1,4 @@
-package com.junyoung.yelpdp;
+package yelp.dp;
 
 import java.io.IOException;
 import java.util.Set;
@@ -101,7 +101,7 @@ public class BusinessSummaryByState {
         }
 
         // 잡 생성 및 설정
-        Job job = Job.getInstance(conf, "Merge Json");
+        Job job = Job.getInstance(conf, "Summary of business by State");
         job.setJarByClass(BusinessSummaryByState.class); // Job 클래스 설정
         job.setMapperClass(Map.class); // Mapper 클래스 설정
         job.setReducerClass(Reduce.class); // Reducer 클래스 설정
