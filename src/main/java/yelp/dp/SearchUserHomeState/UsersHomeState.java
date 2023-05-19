@@ -1,7 +1,6 @@
 package yelp.dp.SearchUserHomeState;
 
 import java.io.IOException;
-import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -40,7 +39,7 @@ public class UsersHomeState {
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
             JsonObject json = gson.fromJson(value.toString(), JsonObject.class); // input의 line으로 json 정의
             
-            String businessState = json.get("state").toString(); // 가게가 위치한 주(state) 저장
+            String businessState = json.get("state").toString().replaceAll("\"", ""); // 가게가 위치한 주(state)에 특수기호를 제외하고 저장
             String[] visistedUsers = json.get("visited_users").toString().split(", "); // 해당 가게에 방문한 손님들 배열
             for (String visitedUser : visistedUsers) { // 해당 가게를 방문한 유저들에 대해 해당 가게가 위치한 주(state)를 value 값으로 전달
                 context.write(new Text(visitedUser), new Text("job1, " + businessState));
@@ -56,15 +55,11 @@ public class UsersHomeState {
             HashMap<String, Integer> userReviewStates = new HashMap<String, Integer>(); // 유저가 작성한 리뷰의 가게 주(state)
 
             for (Text value : values) {
-                String[] identityAndValue = value.toString().split(", ");
+                String[] identityAndValue = value.toString().split(", ", 2); // 2개의 요소로 split
                 if(identityAndValue[0].equals("user")) {
-                    try {
-                        Set<Entry<String, JsonElement>> userJson = gson.fromJson(identityAndValue[1], JsonObject.class).entrySet();
-                        for (Entry<String, JsonElement> userJsonElement : userJson) {
-                            json.add(userJsonElement.getKey(), userJsonElement.getValue());
-                        }
-                    } catch(Exception e) {
-                        System.out.println(identityAndValue[1]);
+                    Set<Entry<String, JsonElement>> userJson = gson.fromJson(identityAndValue[1], JsonObject.class).entrySet();
+                    for (Entry<String, JsonElement> userJsonElement : userJson) {
+                        json.add(userJsonElement.getKey(), userJsonElement.getValue());
                     }
                 } else if(identityAndValue[0].equals("job1")) {
                     // 유저가 현재 주(state)의 가게들에 대한 리뷰를 작성개수 카운팅
@@ -72,7 +67,7 @@ public class UsersHomeState {
                 }
             }
 
-            if(json.has("user_id")) {
+            if(json.has("user_id") && userReviewStates.size() > 0) { // 유저 정보와 주(state) 정보가 모두 들어온 경우에만 실행
                 // 유저가 가장 많이 리뷰를 작성한 주(state)를 찾음
                 String maximumReviewState = ""; // 주가 저장될 문자열 변수
                 Integer maximumReviewStateCount = 0; // 리뷰의 수가 저장될 변수
@@ -83,7 +78,7 @@ public class UsersHomeState {
                     }
                 }
 
-                json.addProperty("home_state", userReviewStates.toString()); // 가장 리뷰를 많이 작성한 주(state)를 사용자가 살고 있는 주로 정의하고 저장
+                json.addProperty("home_state", maximumReviewState); // 가장 리뷰를 많이 작성한 주(state)를 사용자가 살고 있는 주로 정의하고 저장
 
                 context.write(NullWritable.get(), new Text(gson.toJson(json)));
             }
